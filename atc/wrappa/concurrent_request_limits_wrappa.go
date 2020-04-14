@@ -18,19 +18,29 @@ type ConcurrentRequestLimitFlag struct {
 }
 
 func (crl *ConcurrentRequestLimitFlag) UnmarshalFlag(value string) error {
-	vs := strings.SplitN(value, "=", 2)
-	if len(vs) != 2 {
-		return fmt.Errorf("invalid concurrent request limit '%s' (must be <api action>=<non-negative integer>)", value)
-	}
-
-	crl.Action = vs[0]
-	limit, err := strconv.Atoi(vs[1])
+	variable, expression, err := parseAssignment(value)
 	if err != nil {
 		return err
 	}
+	limit, err := strconv.Atoi(expression)
+	if err != nil {
+		return formatError(value, "limit must be an integer")
+	}
+	crl.Action = variable
 	crl.Limit = limit
-
 	return nil
+}
+
+func parseAssignment(value string) (string, string, error) {
+	assignment := strings.Split(value, "=")
+	if len(assignment) != 2 {
+		return "", "", formatError(value, "value must be an assignment")
+	}
+	return assignment[0], assignment[1], nil
+}
+
+func formatError(value string, reason string) error {
+	return fmt.Errorf("invalid concurrent request limit '%s': %s", value, reason)
 }
 
 type ConcurrencyLimitsWrappa struct {
